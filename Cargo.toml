@@ -1,0 +1,9 @@
+[package]
+name = "cryptopals_rs"
+version = "0.1.0"
+authors = ["Philip Hayes <philiphayes9@gmail.com>"]
+
+[dependencies]
+rustc-serialize = "0.3"
+openssl = "0.7"
+rand = "0.3"
