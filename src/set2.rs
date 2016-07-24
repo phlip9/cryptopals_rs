@@ -1,11 +1,12 @@
 use std::io::prelude::*;
 use std::fs::File;
-use std::collections::HashSet;
+use std::collections::{HashSet, BTreeMap};
 
 use rand::{thread_rng, Rng};
 
 use serialize::base64::FromBase64;
 use serialize::hex::ToHex;
+use serialize::json::{Json, ToJson};
 
 use ssl::crypto::symm::{self, encrypt, decrypt};
 
@@ -244,17 +245,19 @@ fn encryption_oracle_2(input: &[u8], unknown: &[u8], key: &[u8]) -> Vec<u8> {
 }
 
 pub fn set_2_12() {
-    let mut rng = thread_rng();
+    // unknown text we will attempt to decode with attacker controlled input
+    // to the encryption oracle
     let unknown = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg\
                    aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq\
                    dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg\
                    YnkK".from_base64().unwrap();
+    let mut rng = thread_rng();
     let mut key = [0_u8; 16];
     rng.fill_bytes(&mut key);
 
     // Determine blocksize
     let mut i = 1;
-    let mut blocksize = 0;
+    let blocksize;
     loop {
         let input = vec!['A' as u8; 2*i];
         let out = encryption_oracle_2(&input, &unknown, &key);
@@ -288,9 +291,9 @@ pub fn set_2_12() {
     // Decrypt ciphertext byte-by-byte
     let mut plaintext: Vec<u8> = Vec::with_capacity(ctxt_len);
     for i in 0..ctxt_len {
+        let mut input: Vec<u8> = Vec::new();
+
         for char_guess in 0...255 {
-            let mut input: Vec<u8> = Vec::new();
-            
             let k = (i as i32) - (blocksize as i32) + 1;
 
             for j in k..(i as i32) {
@@ -302,20 +305,23 @@ pub fn set_2_12() {
             }
 
             input.push(char_guess);
+        }
 
-            for _ in 0..(blocksize - (i % blocksize)) - 1 {
-                input.push('A' as u8);
-            }
+        for _ in 0..(blocksize - (i % blocksize)) - 1 {
+            input.push('A' as u8);
+        }
 
-            let out = encryption_oracle_2(&input, &unknown, &key);
-            queries += 1;
+        let out = encryption_oracle_2(&input, &unknown, &key);
+        queries += 1;
 
-            let b_i = (i / blocksize) + 1;
+        let b_i = (i / blocksize) + 256;
+        let cipher_block = &out[b_i*blocksize..(b_i+1)*blocksize];
 
-            let block1 = &out[0..blocksize];
-            let block2 = &out[b_i*blocksize..(b_i+1)*blocksize];
-
-            if block1 == block2 {
+        // search for input block with same AES ECB output
+        for char_guess in 0...255 {
+            let j = char_guess as usize;
+            let guess_block = &out[j*blocksize..(j+1)*blocksize];
+            if guess_block == cipher_block {
                 plaintext.push(char_guess);
                 break;
             }
@@ -325,4 +331,71 @@ pub fn set_2_12() {
     println!("queries = {}", queries);
     println!("===");
     println!("{}", String::from_utf8_lossy(&plaintext));
+}
+
+fn parse_querystr(input: &str) -> Result<Json, ()> {
+    let mut obj = BTreeMap::new();
+    for pair in input.split('&') {
+        let mut items = pair.split('=');
+        match (items.next(), items.next(), items.next()) {
+            (Some(key), Some(val), None) => {
+                obj.insert(key.to_string(), Json::String(val.to_string()));
+            },
+            _ => {
+                return Err(());
+            }
+        };
+    }
+    Ok(Json::Object(obj))
+}
+
+#[test]
+fn test_parse_queryst() {
+    let json = parse_querystr("foo=bar&baz=wanker@foobar.com").unwrap();
+    let obj = json.as_object().unwrap();
+    assert_eq!(obj["foo"], "bar".to_json());
+    assert_eq!(obj["baz"], "wanker@foobar.com".to_json());
+}
+
+fn profile_for(email: &str) -> String {
+    let email_clean = email.replace(|c| c == '=' || c == '&', "");
+    format!("email={}&uid={}&role=user", email_clean, 10)
+}
+
+fn encryption_oracle_3(key: &[u8], input: &str) -> Vec<u8> {
+    let plaintext = profile_for(input);
+    let data = plaintext.as_bytes();
+    let iv = [0_u8; 16];
+    encrypt(symm::Type::AES_128_ECB, key, &iv, data)
+}
+
+fn decryption_oracle_3(key: &[u8], data: &[u8]) -> Json {
+    let iv = [0_u8; 16];
+    let plaintext = decrypt(symm::Type::AES_128_ECB, key, &iv, data);
+    let string = String::from_utf8_lossy(&plaintext);
+    parse_querystr(&string).unwrap()
+}
+
+#[test]
+fn set_2_13() {
+    let blocksize = 16;
+    let mut rng = thread_rng();
+    let mut key = [0_u8; 16];
+    rng.fill_bytes(&mut key);
+
+    // 0123456789012345|0123456789012345|0123456789012345|012345678912345
+    // email=AAAAAAAAAA|adminPPPPPPPPPPP|AAA&uid=10&role=|userPPPPPPPPPPP
+    //       ^^^^^^^^^^|^^^^^^^^^^^^^^^^|^^^
+    //                     input
+
+    let input = "AAAAAAAAAAadmin\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0bAAA";
+    let mut ciphertext = encryption_oracle_3(&key, input);
+
+    // substitute the block with admin text in it to make an admin profile!
+    let admin_block = &ciphertext[1*blocksize..2*blocksize].to_vec();
+    &mut ciphertext[3*blocksize..4*blocksize].copy_from_slice(&admin_block);
+
+    let json = decryption_oracle_3(&key, &ciphertext);
+    let obj = json.as_object().unwrap();
+    assert_eq!(obj["role"], "admin".to_json());
 }
