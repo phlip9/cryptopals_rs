@@ -6,7 +6,7 @@ use rand::{thread_rng, Rng};
 
 use serialize::base64::FromBase64;
 use serialize::hex::ToHex;
-use serialize::json::Json;
+use serialize::json::{Json, ToJson};
 
 use ssl::crypto::symm::{self, encrypt, decrypt};
 
@@ -566,5 +566,82 @@ pub fn set_2_14() {
     }
 
     println!("===");
+    println!("{}", String::from_utf8_lossy(&plaintext));
+}
+
+// unpad pkcs7 padding with validation
+fn unpad_pkcs7_2(mut data: Vec<u8>) -> Result<Vec<u8>, String> {
+    let len = data.len();
+    let pad = data[len - 1] as usize;
+    if pad > len {
+        return Err("padding too large".to_string());
+    }
+    for i in 0..pad {
+        let idx = len - i - 1;
+        if data[idx] != pad as u8 {
+            return Err("invalid padding!".to_string());
+        }
+    }
+    data.truncate(len - pad);
+    Ok(data)
+}
+
+#[test]
+fn test_unpad_pkcs7_2() {
+    let mut a = "ABCD\x04\x04\x04\x04".as_bytes().to_vec();
+    a = unpad_pkcs7_2(a).unwrap();
+    assert_eq!(a, "ABCD".as_bytes());
+    a = "ABCD\x01\x02\x03\x04".as_bytes().to_vec();
+    let mut res = unpad_pkcs7_2(a);
+    assert!(res.is_err());
+    a = "ABCD\x04\x04".as_bytes().to_vec();
+    res = unpad_pkcs7_2(a);
+    assert!(res.is_err());
+}
+
+fn encryption_oracle_16(key: &[u8], iv: &[u8], input: &[u8]) -> Vec<u8> {
+    let prefix = "comment1=cooking%20MCs;userdata=".as_bytes();
+    let postfix = ";comment2=%20like%20a%20pound%20of%20bacon".as_bytes();
+
+    let input_filtered = input.iter()
+        .filter(|&&c| c != ';' as u8 && c != '=' as u8)
+        .cloned()
+        .collect::<Vec<u8>>();
+
+    let mut data = prefix.to_vec();
+    data.extend_from_slice(&input_filtered);
+    data.extend_from_slice(postfix);
+
+    encrypt(symm::Type::AES_128_CBC, key, iv, &data)
+}
+
+fn decryption_oracle_16(key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
+    decrypt(symm::Type::AES_128_CBC, key, iv, data)
+}
+
+pub fn set_2_16() {
+    let mut rng = thread_rng();
+    let blocksize = 16;
+    let mut key = [0_u8; 16];
+    rng.fill_bytes(&mut key);
+    let mut iv = [0_u8; 16];
+    rng.fill_bytes(&mut iv);
+
+    //   AAAAAAAAAAAAAAAA|AAAAAAAAAAAAAAAA
+    // ^ 0000;admin=true;|................
+    // ^ 0000AAAAAAAAAAAA|................
+    // = ................|AAAA;admin=true;
+
+    let input = ['A' as u8; 2*16];
+    let mut ciphertext = encryption_oracle_16(&key, &iv, &input);
+
+    let block1 = "\x00\x00\x00\x00\x00;admin=true".as_bytes();
+    let block2 = "\x00\x00\x00\x00\x00AAAAAAAAAAA".as_bytes();
+    for i in 0..blocksize {
+        ciphertext[i + 2*blocksize] ^= block1[i] ^ block2[i];
+    }
+
+    let plaintext = decryption_oracle_16(&key, &iv, &ciphertext);
+
     println!("{}", String::from_utf8_lossy(&plaintext));
 }
