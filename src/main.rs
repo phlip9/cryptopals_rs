@@ -8,9 +8,11 @@ extern crate rustc_serialize as serialize;
 extern crate openssl as ssl;
 extern crate rand;
 
+mod crypto;
+mod freq;
+mod math;
+mod util;
+mod vector;
+
 mod set1;
 mod set2;
-
-fn main() {
-    set2::set_2_14();
-}
