@@ -38,7 +38,7 @@ fn encrypt_cbc(data: &[u8], key: &[u8], iv: &[u8], blocksize: usize) -> Vec<u8> 
     out
 }
 
-fn decrypt_cbc(data: &[u8], key: &[u8], iv: &[u8], blocksize: usize) -> Vec<u8> {
+fn decrypt_cbc(data: &[u8], key: &[u8], iv: &[u8], blocksize: usize) -> Option<Vec<u8>> {
     assert!(data.len() % blocksize == 0, "data must be multiple length of blocksize");
 
     let blocks = data.len() / blocksize;
@@ -98,7 +98,7 @@ fn test_decrypt_cbc() {
     let iv = vec![0_u8; key.len()];
 
     let out1 = decrypt(symm::Type::AES_128_CBC, key, &iv, &bytes);
-    let out2 = decrypt_cbc(&bytes, key, &iv, 16);
+    let out2 = decrypt_cbc(&bytes, key, &iv, 16).unwrap();
 
     let m1 = String::from_utf8_lossy(&out1);
     let m2 = String::from_utf8_lossy(&out2);
@@ -119,7 +119,7 @@ fn test_encrypt_decrypt_cbc() {
     assert_eq!(cipher1.to_hex(), cipher2.to_hex());
 
     let out1 = decrypt(symm::Type::AES_128_CBC, key, &iv, &cipher1);
-    let out2 = decrypt_cbc(&cipher2, key, &iv, 16);
+    let out2 = decrypt_cbc(&cipher2, key, &iv, 16).unwrap();
 
     assert_eq!(out1.to_hex(), out2.to_hex());
 }
