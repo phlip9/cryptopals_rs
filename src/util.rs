@@ -44,6 +44,25 @@ pub fn bytes_hamming_dist(b1: &[u8], b2: &[u8]) -> u32 {
         .sum()
 }
 
+pub fn hexdump(b: &[u8]) {
+    for bytes in b.chunks(16) {
+        println!("{} {}", bytes.iter()
+                               .map(|x| format!("{:02x}", x))
+                               .collect::<Vec<_>>()
+                               .join(" "),
+                          bytes.iter()
+                               .map(|&c| {
+                                   if c >= 32 && c < 127 {
+                                       format!("{}", c as char)
+                                   } else {
+                                       ".".to_string()
+                                   }
+                               })
+                               .collect::<Vec<_>>()
+                               .join(""));
+    }
+}
+
 #[test]
 fn test_xor_bytes() {
     assert_eq!(
