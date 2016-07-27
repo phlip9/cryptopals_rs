@@ -30,6 +30,47 @@ pub mod pkcs7 {
     }
 }
 
+pub mod aes {
+    use ssl::crypto::symm::{self, Crypter};
+
+    pub fn ctr(key: &[u8], n: u64, data: &[u8]) -> Vec<u8> {
+        let blocks = data.len() / 16;
+        let iv = [0_u8; 16];
+        let keystream = (0..)
+            .flat_map(|c: u64| {
+                let ctr_bytes = [
+                    ( n & 0x00000000000000FF) as u8,
+                    ((n & 0x000000000000FF00) >> 8 ) as u8,
+                    ((n & 0x0000000000FF0000) >> 16) as u8,
+                    ((n & 0x00000000FF000000) >> 24) as u8,
+                    ((n & 0x000000FF00000000) >> 32) as u8,
+                    ((n & 0x0000FF0000000000) >> 40) as u8,
+                    ((n & 0x00FF000000000000) >> 48) as u8,
+                    ((n & 0xFF00000000000000) >> 56) as u8,
+                    ( c & 0x00000000000000FF) as u8,
+                    ((c & 0x000000000000FF00) >> 8 ) as u8,
+                    ((c & 0x0000000000FF0000) >> 16) as u8,
+                    ((c & 0x00000000FF000000) >> 24) as u8,
+                    ((c & 0x000000FF00000000) >> 32) as u8,
+                    ((c & 0x0000FF0000000000) >> 40) as u8,
+                    ((c & 0x00FF000000000000) >> 48) as u8,
+                    ((c & 0xFF00000000000000) >> 56) as u8
+                ];
+                let cr = Crypter::new(symm::Type::AES_128_ECB);
+                cr.init(symm::Mode::Encrypt, &key, &iv);
+                cr.pad(false);
+                let mut r = cr.update(&ctr_bytes);
+                let rest = cr.finalize();
+                r.extend(rest.into_iter());
+                r.into_iter()
+            });
+        data.iter()
+            .zip(keystream)
+            .map(|(d, e)| d ^ e)
+            .collect::<Vec<_>>()
+    }
+}
+
 pub mod cbc {
     use ssl::crypto::symm::{self, decrypt as ssl_decrypt, encrypt as ssl_encrypt};
     use super::pkcs7;
@@ -116,6 +157,7 @@ mod test {
 
     use super::pkcs7::{pad, unpad};
     use super::cbc;
+    use super::aes;
 
     #[test]
     fn test_pkcs7_pad() {
@@ -188,5 +230,17 @@ mod test {
         let out2 = cbc::decrypt(key, &iv, &cipher2).unwrap();
 
         assert_eq!(out1.to_hex(), out2.to_hex());
+    }
+
+    #[test]
+    fn test_aes_ctr() {
+        let ctxt = "L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==";
+        let data = ctxt.from_base64().unwrap();
+        let key = "YELLOW SUBMARINE".as_bytes();
+        let nonce = 0_u64;
+        let out = aes::ctr(key, nonce, &data);
+        assert_eq!(out.as_slice(), "Yo, VIP Let's kick it Ice, Ice, baby Ice, Ice, baby ".as_bytes());
+        let ctxt2 = aes::ctr(key, nonce, &out);
+        assert_eq!(&ctxt2, &data);
     }
 }
