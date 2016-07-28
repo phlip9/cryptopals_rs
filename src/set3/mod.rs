@@ -3,3 +3,4 @@ mod p18;
 mod p19;
 mod p20;
 mod p21;
+mod p22;
