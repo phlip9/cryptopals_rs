@@ -1,4 +1,7 @@
 use std::iter::FromIterator;
+use std::num::Wrapping as w;
+
+use rand::{Rng, SeedableRng, Rand};
 
 pub fn xor_bytes(src: &[u8], xor: &[u8]) -> Vec<u8> {
     let xor_cycle = xor.iter().cycle();
@@ -68,6 +71,94 @@ pub fn hexdump(b: &[u8]) {
             print!("{}", &padding);
         }
         println!("{}", string);
+    }
+}
+
+#[allow(bad_style)]
+type w32 = w<u32>;
+
+// Mersenne Twister 19937 Constants
+const MW: usize = 32;
+const MU: usize = 11;
+const MS: usize = 7;
+const ML: usize = 18;
+const MT: usize = 15;
+const MN: usize = 624;
+const MM: usize = 397;
+const M1: w32 = w(0x1_u32);
+const MA: w32 = w(0x9908B0DF_u32);
+const MB: w32 = w(0x9D2C5680_u32);
+const MC: w32 = w(0xEFC60000_u32);
+const MF: w32 = w(0x6C078965_u32);
+const MPU: w32 = w(0x80000000_u32);
+const MPL: w32 = w(0x7fffffff_u32);
+
+#[allow(bad_style)]
+pub struct MT19937Rng {
+    i: usize,
+    X: [w32; MN],
+}
+
+impl MT19937Rng {
+    pub fn new_unseeded() -> MT19937Rng {
+        let mut rng = MT19937Rng {
+            i: MN,
+            X: [w(0_u32); MN]
+        };
+        rng.reseed(5489);
+        rng
+    }
+
+    #[allow(bad_style)]
+    fn twist(&mut self) {
+        for j in 0..MN {
+            let x = (self.X[j] & MPU) +
+                (self.X[(j + 1) % MN] & MPL);
+            let xA = (x >> 1) ^ (MA * (x & M1));
+            self.X[j] = self.X[(j + MM) % MN] ^ xA;
+        }
+        self.i = 0;
+    }
+}
+
+impl SeedableRng<u32> for MT19937Rng {
+    fn reseed(&mut self, seed: u32) {
+        self.i = MN;
+        self.X[0] = w(seed);
+        for j in 1..MN {
+            let x_p = self.X[j - 1];
+            self.X[j] = MF * (x_p ^ (x_p >> (MW - 2))) + w(j as u32);
+        }
+    }
+
+    fn from_seed(seed: u32) -> MT19937Rng {
+        let mut rng = MT19937Rng::new_unseeded();
+        rng.reseed(seed);
+        rng
+    }
+} 
+
+impl Rng for MT19937Rng {
+    fn next_u32(&mut self) -> u32 {
+        if self.i >= MN {
+            self.twist();
+        }
+
+        let mut y = self.X[self.i];
+        y = y ^ (y >> MU);
+        y = y ^ ((y << MS) & MB);
+        y = y ^ ((y << MT) & MC);
+        y = y ^ (y >> ML);
+
+        self.i += 1;
+        y.0
+    }
+}
+
+impl Rand for MT19937Rng {
+    fn rand<R: Rng>(rng: &mut R) -> MT19937Rng {
+        let seed: u32 = rng.gen();
+        MT19937Rng::from_seed(seed)
     }
 }
 
