@@ -34,7 +34,6 @@ pub mod aes {
     use ssl::crypto::symm::{self, Crypter};
 
     pub fn ctr(key: &[u8], n: u64, data: &[u8]) -> Vec<u8> {
-        let blocks = data.len() / 16;
         let iv = [0_u8; 16];
         let keystream = (0..)
             .flat_map(|c: u64| {

@@ -9,32 +9,38 @@ use util::xor_bytes;
 
 pub fn english_freq_vec() -> Vecf {
     let mut fs = vec![0.0f32; 256];
-    fs['a' as usize] = 0.08167;
-    fs['b' as usize] = 0.01492;
-    fs['c' as usize] = 0.02782;
-    fs['d' as usize] = 0.04253;
-    fs['e' as usize] = 0.12702;
-    fs['f' as usize] = 0.02228;
-    fs['g' as usize] = 0.02015;
-    fs['h' as usize] = 0.06094;
-    fs['i' as usize] = 0.06966;
-    fs['j' as usize] = 0.00153;
-    fs['k' as usize] = 0.00772;
-    fs['l' as usize] = 0.04025;
-    fs['m' as usize] = 0.02406;
-    fs['n' as usize] = 0.06749;
-    fs['o' as usize] = 0.07507;
-    fs['p' as usize] = 0.01929;
-    fs['q' as usize] = 0.00095;
-    fs['r' as usize] = 0.05987;
-    fs['s' as usize] = 0.06327;
-    fs['t' as usize] = 0.09056;
-    fs['u' as usize] = 0.02758;
-    fs['v' as usize] = 0.00978;
-    fs['w' as usize] = 0.02361;
-    fs['x' as usize] = 0.00150;
-    fs['y' as usize] = 0.01974;
-    fs['z' as usize] = 0.00074;
+    fs['a' as usize] = 0.0651738;
+    fs['b' as usize] = 0.0124248;
+    fs['c' as usize] = 0.0217339;
+    fs['d' as usize] = 0.0349835;
+    fs['e' as usize] = 0.1041442;
+    fs['f' as usize] = 0.0197881;
+    fs['g' as usize] = 0.0158610;
+    fs['h' as usize] = 0.0492888;
+    fs['i' as usize] = 0.0558094;
+    fs['j' as usize] = 0.0009033;
+    fs['k' as usize] = 0.0050529;
+    fs['l' as usize] = 0.0331490;
+    fs['m' as usize] = 0.0202124;
+    fs['n' as usize] = 0.0564513;
+    fs['o' as usize] = 0.0596302;
+    fs['p' as usize] = 0.0137645;
+    fs['q' as usize] = 0.0008606;
+    fs['r' as usize] = 0.0497563;
+    fs['s' as usize] = 0.0515760;
+    fs['t' as usize] = 0.0729357;
+    fs['u' as usize] = 0.0225134;
+    fs['v' as usize] = 0.0082903;
+    fs['w' as usize] = 0.0171272;
+    fs['x' as usize] = 0.0013692;
+    fs['y' as usize] = 0.0145984;
+    fs['z' as usize] = 0.0007836;
+    fs[' ' as usize] = 0.1918182;
+
+    for c in 'A' as usize ... 'Z' as usize {
+        fs[c] = fs[c + 32] / 20.0f32;
+    }
+
     fs.norm()
 }
 
@@ -93,10 +99,11 @@ pub fn most_english<F>(bytes: &[u8], f: F) -> (u8, f32)
 {
     (0...255)
         .map(|k| {
-            let xor = vec![k];
+            let xor = [k];
             let m = xor_bytes(bytes, &xor);
             (k, f(&m))
         })
+        // hack to max by float key
         .max_by_key(|&(_, e)| (e * 1000.0) as i32)
         .map(|(k, e)| (k, e as f32 / 1000.0))
         .unwrap()

@@ -48,15 +48,12 @@ fn run() {
 
     let en_dict = dict("/usr/share/dict/american-english").unwrap();
 
-    let mut key = keys.into_iter()
+    let key = keys.into_iter()
         .max_by_key(|k| {
             let m = xor_bytes(&bytes, k);
             (dict_englishness(&m, &en_dict) * 1000.0) as i32
         })
         .unwrap();
-
-    // manual fix lol
-    key[3] = 'm' as u8;
 
     assert_eq!(String::from_utf8_lossy(&key), "Terminator X: Bring the noise");
 }

@@ -1,3 +1,5 @@
+use std::iter::FromIterator;
+
 pub fn xor_bytes(src: &[u8], xor: &[u8]) -> Vec<u8> {
     let xor_cycle = xor.iter().cycle();
     let res: Vec<u8> = src.iter()
@@ -46,20 +48,26 @@ pub fn bytes_hamming_dist(b1: &[u8], b2: &[u8]) -> u32 {
 
 pub fn hexdump(b: &[u8]) {
     for bytes in b.chunks(16) {
-        println!("{} {}", bytes.iter()
-                               .map(|x| format!("{:02x}", x))
-                               .collect::<Vec<_>>()
-                               .join(" "),
-                          bytes.iter()
-                               .map(|&c| {
-                                   if c >= 32 && c < 127 {
-                                       format!("{}", c as char)
-                                   } else {
-                                       ".".to_string()
-                                   }
-                               })
-                               .collect::<Vec<_>>()
-                               .join(""));
+        let hex_digits =  bytes.iter()
+            .map(|x| format!("{:02x}", x))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let string = bytes.iter()
+            .map(|&c| {
+                if c >= 32 && c < 127 {
+                    format!("{}", c as char)
+                } else {
+                    ".".to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("");
+        print!("{} ", hex_digits);
+        if bytes.len() != 16 {
+            let padding = String::from_iter(vec![' '; 3 * (16 - bytes.len())]);
+            print!("{}", &padding);
+        }
+        println!("{}", string);
     }
 }
 
