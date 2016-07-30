@@ -75,7 +75,7 @@ pub fn hexdump(b: &[u8]) {
 }
 
 #[allow(bad_style)]
-type w32 = w<u32>;
+pub type w32 = w<u32>;
 
 // Mersenne Twister 19937 Constants
 const MW: usize = 32;
@@ -107,6 +107,13 @@ impl MT19937Rng {
         };
         rng.reseed(5489);
         rng
+    }
+
+    pub fn from_state(i: usize, X: [w32; MN]) -> MT19937Rng {
+        MT19937Rng {
+            i: i,
+            X: X,
+        }
     }
 
     #[allow(bad_style)]
