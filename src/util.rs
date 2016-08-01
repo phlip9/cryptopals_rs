@@ -1,5 +1,6 @@
 use std::iter::FromIterator;
 use std::num::Wrapping as w;
+use std::mem;
 
 use rand::{Rng, SeedableRng, Rand};
 
@@ -109,6 +110,7 @@ impl MT19937Rng {
         rng
     }
 
+    #[allow(bad_style)]
     pub fn from_state(i: usize, X: [w32; MN]) -> MT19937Rng {
         MT19937Rng {
             i: i,
@@ -166,6 +168,80 @@ impl Rand for MT19937Rng {
     fn rand<R: Rng>(rng: &mut R) -> MT19937Rng {
         let seed: u32 = rng.gen();
         MT19937Rng::from_seed(seed)
+    }
+}
+
+pub struct PRNGKeystream<'a, R: 'a> {
+    rng: &'a mut R,
+    curr: u32,
+    i: usize,
+}
+
+impl<'a, R: Rng> PRNGKeystream<'a, R> {
+    fn from_rng(rng: &'a mut R) -> PRNGKeystream<'a, R> {
+        let curr = rng.next_u32();
+        PRNGKeystream {
+            rng: rng,
+            curr: curr,
+            i: 0,
+        }
+    }
+}
+
+impl<'a, R: Rng> Iterator for PRNGKeystream<'a, R> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<u8> {
+        if self.i == 4 {
+            self.curr = self.rng.next_u32();
+            self.i = 0;
+        }
+        let sh = self.i << 3;
+        let out = ((self.curr & (0xFF << sh)) >> sh) as u8;
+        self.i += 1;
+        Some(out)
+    }
+}
+
+pub fn prng_crypt<R: Rng>(rng: &mut R, data: &[u8]) -> Vec<u8> {
+    let ks = PRNGKeystream::from_rng(rng);
+    ks.zip(data)
+        .map(|(a, b)| a ^ b)
+        .collect::<Vec<_>>()
+}
+
+#[test]
+fn test_prng_crypt() {
+    let mut ks_rng = MT19937Rng::from_seed(0x12345678_u32);
+    let data = "DOS'T THOU JEER AND T-TAUNT ME IN THE TEETH?".as_bytes();
+    let ctxt = prng_crypt(&mut ks_rng, data);
+
+    ks_rng.reseed(0x12345678_u32);
+    let ptxt = prng_crypt(&mut ks_rng, &ctxt);
+    assert_eq!(ptxt.as_slice(), data);
+}
+
+#[test]
+fn test_prng_keystream() {
+    let mut ks_rng = MT19937Rng::from_seed(0x12345678_u32);
+    let mut ref_rng = MT19937Rng::from_seed(0x12345678_u32);
+    let ks = PRNGKeystream::from_rng(&mut ks_rng);
+
+    let n = 1000;
+
+    let ref_outs = (0..n)
+        .map(|_| ref_rng.next_u32());
+
+    let ks_outs = ks
+        .take(4*n)
+        .collect::<Vec<_>>()
+        .chunks(4)
+        .map(|c| [c[0], c[1], c[2], c[3]])
+        .map(|c| unsafe { mem::transmute_copy(&c) })
+        .collect::<Vec<_>>();
+
+    for (ref_u32, ks_u32) in ref_outs.zip(ks_outs) {
+        assert_eq!(ref_u32, ks_u32);
     }
 }
 

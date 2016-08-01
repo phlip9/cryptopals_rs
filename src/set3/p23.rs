@@ -291,6 +291,7 @@ fn print_A_matrix() {
     assert!(false);
 }
 
+#[allow(bad_style)]
 #[test]
 fn run() {
     let mut rng = MT19937Rng::from_seed(0x12345678_u32);
