@@ -29,8 +29,8 @@ fn run() {
     let nonce: u64 = rng.gen();
 
     let input = b"AAAAAAAAAAA";
-    let mut ctxt = encryption_oracle(&key, nonce, input);
     let subst = b";admin=true";
+    let mut ctxt = encryption_oracle(&key, nonce, input);
     for i in 0..subst.len() {
         ctxt[i + 32] ^= input[i] ^ subst[i];
     }
