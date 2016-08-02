@@ -3,7 +3,7 @@ use std::io::BufReader;
 use std::fs::File;
 
 use rand::{Rng, weak_rng};
-use serialize::base64::{FromBase64};
+use serialize::base64::FromBase64;
 
 use crypto::aes;
 use freq::{english_freq_vec, freq_englishness, most_english};
