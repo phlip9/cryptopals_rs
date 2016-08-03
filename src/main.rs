@@ -10,6 +10,7 @@ extern crate rustc_serialize as serialize;
 mod crypto;
 mod freq;
 mod math;
+mod sha1;
 mod util;
 mod vector;
 

@@ -1,10 +1,9 @@
 use std::iter::FromIterator;
 use std::num::Wrapping as w;
 use std::mem;
+use std::ptr;
 
 use rand::{Rng, SeedableRng, Rand};
-use rust_crypto::digest::Digest;
-use rust_crypto::sha1::Sha1;
 
 pub fn xor_bytes(src: &[u8], xor: &[u8]) -> Vec<u8> {
     let xor_cycle = xor.iter().cycle();
@@ -212,12 +211,126 @@ pub fn prng_crypt<R: Rng>(rng: &mut R, data: &[u8]) -> Vec<u8> {
         .collect::<Vec<_>>()
 }
 
-pub fn sha1(input: &[u8]) -> Vec<u8> {
-    let mut digest = Sha1::new();
-    digest.input(input);
-    let mut out = vec![0_u8; 20];
-    digest.result(&mut out);
-    out
+pub fn read_u32_be(input: &[u8]) -> u32 {
+    assert!(input.len() == 4);
+    unsafe {
+        let mut tmp: u32 = mem::uninitialized();
+        ptr::copy_nonoverlapping(
+            input.get_unchecked(0),
+            &mut tmp as *mut _ as *mut u8,
+            4);
+        u32::from_be(tmp)
+    }
+}
+
+pub fn read_u64_be(input: &[u8]) -> u64 {
+    assert!(input.len() == 8);
+    unsafe {
+        let mut tmp: u64 = mem::uninitialized();
+        ptr::copy_nonoverlapping(
+            input.get_unchecked(0),
+            &mut tmp as *mut _ as *mut u8,
+            8);
+        u64::from_be(tmp)
+    }
+}
+
+pub fn read_u32v_be(dst: &mut [u32], input: &[u8]) {
+    assert!(dst.len() * 4 == input.len());
+    unsafe {
+        let mut x: *mut u32 = dst.get_unchecked_mut(0);
+        let mut y: *const u8 = input.get_unchecked(0);
+        for _ in 0..dst.len() {
+            let mut tmp: u32 = mem::uninitialized();
+            ptr::copy_nonoverlapping(y, &mut tmp as *mut _ as *mut u8, 4);
+            *x = u32::from_be(tmp);
+            x = x.offset(1);
+            y = y.offset(4);
+        }
+    }
+}
+
+pub fn write_u32_be(dst: &mut [u8], mut input: u32) {
+    assert!(dst.len() == 4);
+    input = input.to_be();
+    unsafe {
+        let tmp = &input as *const _ as *const u8;
+        ptr::copy_nonoverlapping(tmp, dst.get_unchecked_mut(0), 4);
+    }
+}
+
+pub fn write_u64_be(dst: &mut [u8], mut input: u64) {
+    assert!(dst.len() == 8);
+    input = input.to_be();
+    unsafe {
+        let tmp = &input as *const _ as *const u8;
+        ptr::copy_nonoverlapping(tmp, dst.get_unchecked_mut(0), 8);
+    }
+}
+
+pub fn write_u32v_be(dst: &mut [u8], input: &[u32]) {
+    assert!(dst.len() == 4*input.len());
+    unsafe {
+        let mut x: *mut u8 = dst.get_unchecked_mut(0);
+        let mut y: *const u32 = input.get_unchecked(0);
+        for _ in 0..input.len() {
+            let tmp = (*y).to_be();
+            ptr::copy_nonoverlapping(&tmp as *const u32, x as *mut u32, 1);
+            x = x.offset(4);
+            y = y.offset(1);
+        }
+    }
+}
+
+#[test]
+fn test_read_u32_be() {
+    let input = [0x12_u8, 0x34, 0x56, 0x78];
+    assert_eq!(0x12345678_u32, read_u32_be(&input));
+}
+
+#[test]
+fn test_read_u64_be() {
+    let input = [
+        0x12_u8, 0x34, 0x56, 0x78,
+        0x90, 0xab, 0xcd, 0xef,
+    ];
+    assert_eq!(0x1234567890abcdef_u64, read_u64_be(&input));
+}
+
+#[test]
+fn test_read_u32v_be() {
+    let input = [
+        0x12_u8, 0x34, 0x56, 0x78,
+        0x90, 0xab, 0xcd, 0xef,
+    ];
+    let mut dst = [0_u32; 2];
+    read_u32v_be(&mut dst, &input);
+    assert_eq!(dst[0], 0x12345678_u32);
+    assert_eq!(dst[1], 0x90abcdef_u32);
+}
+
+#[test]
+fn test_write_u32_be() {
+    let mut dst = [0_u8; 4];
+    write_u32_be(&mut dst, 0x12345678_u32);
+    let out = read_u32_be(&dst);
+    assert_eq!(out, 0x12345678_u32);
+}
+
+#[test]
+fn test_write_u64_be() {
+    let mut dst = [0_u8; 8];
+    write_u64_be(&mut dst, 0x1234567890abcdef_u64);
+    let out = read_u64_be(&dst);
+    assert_eq!(out, 0x1234567890abcdef_u64);
+}
+
+#[test]
+fn test_write_u32v_be() {
+    let mut dst = [0_u8; 8];
+    let src = [0x12345678_u32, 0x90abcdef_u32];
+    write_u32v_be(&mut dst, &src);
+    assert_eq!(&dst, &[0x12_u8,0x34,0x56,0x78,0x90,0xab,0xcd,0xef]);
 }
 
 #[test]

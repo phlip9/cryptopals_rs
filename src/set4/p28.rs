@@ -1,26 +1,29 @@
 use rand::{Rng, weak_rng};
-use serialize::hex::ToHex;
+use rust_crypto::digest::Digest;
 
-use util::{sha1, xor_bytes};
+use util::xor_bytes;
+use sha1::Sha1;
 
 fn valid_mac(key: &[u8], msg: &[u8], mac: &[u8]) -> bool {
-    let mut mac_preimage = key.to_vec();
-    mac_preimage.extend_from_slice(msg);
-    let out = sha1(&mac_preimage);
-    out == mac
+    let mut m = Sha1::new();
+    let mut out = [0_u8; 20];
+    m.input(key);
+    m.input(msg);
+    m.result(&mut out);
+    &out == mac
 }
 
 #[test]
 fn run() {
-    let s = b"The quick brown fox jumps over the lazy dog";
-    let d = sha1(s).to_hex();
-    assert_eq!(&d, "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12");
-
+    let mut m = Sha1::new();
     let mut rng = weak_rng();
     let key: [u8; 16] = rng.gen();
-    let mut mac_preimage = key.to_vec();
-    mac_preimage.extend_from_slice(s);
-    let mac = sha1(&mac_preimage);
+    let s = b"The quick brown fox jumps over the lazy dog";
+
+    let mut mac = [0_u8; 20];
+    m.input(&key);
+    m.input(s);
+    m.result(&mut mac);
 
     assert!(valid_mac(&key, s, &mac));
 
