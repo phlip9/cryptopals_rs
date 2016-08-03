@@ -2,9 +2,10 @@
 #![feature(slice_patterns)]
 #![feature(step_by)]
 
-extern crate rustc_serialize as serialize;
+extern crate crypto as rust_crypto;
 extern crate openssl as ssl;
 extern crate rand;
+extern crate rustc_serialize as serialize;
 
 mod crypto;
 mod freq;

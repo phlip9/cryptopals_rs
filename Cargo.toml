@@ -7,3 +7,4 @@ authors = ["Philip Hayes <philiphayes9@gmail.com>"]
 openssl = "0.7"
 rand = "0.3"
 rustc-serialize = "0.3"
+rust-crypto = "0.2"

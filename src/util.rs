@@ -3,6 +3,8 @@ use std::num::Wrapping as w;
 use std::mem;
 
 use rand::{Rng, SeedableRng, Rand};
+use rust_crypto::digest::Digest;
+use rust_crypto::sha1::Sha1;
 
 pub fn xor_bytes(src: &[u8], xor: &[u8]) -> Vec<u8> {
     let xor_cycle = xor.iter().cycle();
@@ -208,6 +210,14 @@ pub fn prng_crypt<R: Rng>(rng: &mut R, data: &[u8]) -> Vec<u8> {
     ks.zip(data)
         .map(|(a, b)| a ^ b)
         .collect::<Vec<_>>()
+}
+
+pub fn sha1(input: &[u8]) -> Vec<u8> {
+    let mut digest = Sha1::new();
+    digest.input(input);
+    let mut out = vec![0_u8; 20];
+    digest.result(&mut out);
+    out
 }
 
 #[test]
