@@ -12,8 +12,8 @@ pub struct Sha1 {
 }
 
 #[derive(Copy, Clone)]
-struct Sha1State {
-    state: [u32; 5],
+pub struct Sha1State {
+    pub state: [u32; 5],
 }
 
 #[derive(Copy)]
@@ -37,6 +37,17 @@ impl Sha1 {
             },
         }
     }
+
+    pub fn from_state(len: u64, state: Sha1State) -> Sha1 {
+        Sha1 {
+            len: len,
+            state: state,
+            blocks: Blocks {
+                len: 0,
+                block: [0; 64],
+            }
+        }
+    }
 }
 
 impl Digest for Sha1 {
@@ -57,16 +68,18 @@ impl Digest for Sha1 {
         let blocklen = self.blocks.len as usize;
 
         if blocklen < 56 {
+            self.len += 64;
             let mut last = [0_u8; 64];
-            last[..blocklen].clone_from_slice(&self.blocks.block[..blocklen]);
+            last[0..blocklen].copy_from_slice(&self.blocks.block[0..blocklen]);
             last[blocklen] = 0x80;
-            last[56..64].clone_from_slice(&ml_bytes);
+            last[56..64].copy_from_slice(&ml_bytes);
             state.process(&last[0..64]);
         } else {
+            self.len += 128;
             let mut last = [0_u8; 128];
-            last[..blocklen].clone_from_slice(&self.blocks.block[..blocklen]);
+            last[0..blocklen].copy_from_slice(&self.blocks.block[0..blocklen]);
             last[blocklen] = 0x80;
-            last[120..128].clone_from_slice(&ml_bytes);
+            last[120..128].copy_from_slice(&ml_bytes);
             state.process(&last[0..64]);
             state.process(&last[64..128]);
         }
@@ -90,7 +103,7 @@ impl Blocks {
         if self.len > 0 {
             let len = self.len as usize;
             let amt = cmp::min(input.len(), self.block.len() - len);
-            self.block[len..len + amt].clone_from_slice(&input[..amt]);
+            self.block[len..len + amt].copy_from_slice(&input[..amt]);
             if len + amt == self.block.len() {
                 f(&self.block);
                 self.len = 0;
@@ -105,7 +118,7 @@ impl Blocks {
             if chunk.len() == 64 {
                 f(chunk);
             } else {
-                self.block[..chunk.len()].clone_from_slice(chunk);
+                self.block[..chunk.len()].copy_from_slice(chunk);
                 self.len = chunk.len() as u32;
             }
         }
