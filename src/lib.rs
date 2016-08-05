@@ -6,14 +6,15 @@ extern crate crypto as rust_crypto;
 extern crate openssl as ssl;
 extern crate rand;
 extern crate rustc_serialize as serialize;
+extern crate hyper;
 
-mod crypto;
-mod freq;
-mod math;
-mod md4;
-mod sha1;
-mod util;
-mod vector;
+pub mod crypto;
+pub mod freq;
+pub mod math;
+pub mod md4;
+pub mod sha1;
+pub mod util;
+pub mod vector;
 
 mod set1;
 mod set2;
