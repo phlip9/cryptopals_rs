@@ -2,7 +2,7 @@ use rand::{Rng, weak_rng};
 use serialize::base64::FromBase64;
 use ssl::crypto::symm::{self, encrypt};
 
-use math::Gcd;
+use num::Integer;
 
 fn encryption_oracle(key: &[u8], prefix: &[u8], input: &[u8], unknown: &[u8]) -> Vec<u8> {
     let mut m = Vec::new();
@@ -42,7 +42,7 @@ fn run() {
             .collect::<Vec<_>>();
 
         let len = lens[0];
-        lens.iter().fold(len, |a, &b| a.gcd(b))
+        lens.iter().fold(len, |a, b| a.gcd(b))
     };
 
     println!("blocksize = {}", blocksize);

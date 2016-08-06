@@ -7,6 +7,7 @@ extern crate openssl as ssl;
 extern crate rand;
 extern crate rustc_serialize as serialize;
 extern crate hyper;
+extern crate num;
 
 pub mod crypto;
 pub mod freq;
@@ -20,3 +21,4 @@ mod set1;
 mod set2;
 mod set3;
 mod set4;
+mod set5;

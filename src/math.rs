@@ -1,33 +1,41 @@
-pub trait Gcd {
-    fn gcd(self, other: Self) -> Self;
+use num::{Integer, Zero, One, BigInt, BigUint, FromPrimitive, ToPrimitive};
+
+pub trait ModExp: Integer {
+    fn modexp(&self, exp: &Self, md: &Self) -> Self;
 }
 
-macro_rules! gcd_impl {
+macro_rules! modexp_impl {
     ($($t:ty),*) => ($(
-        impl Gcd for $t {
-            fn gcd(self, other: Self) -> Self {
-                if self > other {
-                    other.gcd(self)
-                } else {
-                    let mut a = self;
-                    let mut b = other;
-                    while b != 0 {
-                        let r = a % b;
-                        a = b;
-                        b = r;
-                    }
-                    a
+        impl ModExp for $t  {
+            fn modexp(&self, exp: &Self, m: &Self) -> Self {
+                if m == &Self::one() {
+                    return Self::zero();
                 }
+                let mut r = Self::one();
+                let mut b = self % m;
+                let mut e = exp.clone();
+                while !e.is_zero() {
+                    if e.is_odd() {
+                        r = (&r * &b) % m;
+                    }
+                    e = &e >> 1;
+                    b = (&b * &b) % m;
+                }
+                r
             }
         }
     )*)
 }
 
-gcd_impl! { u8, usize }
+modexp_impl! { u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, BigInt, BigUint }
 
 #[test]
-fn test_gcd() {
-    assert_eq!(0_u8, 0_u8.gcd(0_u8));
-    assert_eq!(3_u8, 9_u8.gcd(12_u8));
-    assert_eq!(1_usize, 13_usize.gcd(17_usize));
+fn test_modexp() {
+    assert_eq!(6_u32, 5_u32.modexp(&9, &37));
+    
+    let b = BigUint::from_u32(5).unwrap();
+    let e = BigUint::from_u32(9).unwrap();
+    let m = BigUint::from_u32(37).unwrap();
+    let r = b.modexp(&e, &m).to_u32().unwrap();
+    assert_eq!(6, r);
 }
