@@ -2,6 +2,10 @@
 #![feature(slice_patterns)]
 #![feature(step_by)]
 
+#![allow(unused_imports)]
+#![allow(dead_code)]
+#![allow(non_snake_case)]
+
 extern crate crypto as rust_crypto;
 extern crate openssl as ssl;
 extern crate rand;

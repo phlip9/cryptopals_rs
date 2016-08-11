@@ -1,10 +1,11 @@
+#![allow(dead_code)]
 #![feature(inclusive_range_syntax)]
 
 extern crate hyper;
 extern crate rand;
 extern crate rustc_serialize as serialize;
 
-use std::f32;
+//use std::f32;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Instant;
@@ -53,6 +54,7 @@ const PERM_MATS: [u8; N_ROWS] = [
 ];
 
 // byte matrix-vector product
+#[allow(non_snake_case)]
 fn dot(A: &[u8], x: u8) -> u8 {
     let mut y = 0_u8;
     for i in 0..8 {
@@ -106,6 +108,7 @@ fn challenge_mac(client: &Client, task: &Task) -> TaskRet {
     }
 }
 
+#[allow(non_snake_case)]
 fn main() {
     let mut mac = [0_u8; 20];
     let mut timing_vec = [0_u64; 256];
@@ -114,7 +117,7 @@ fn main() {
     let task_queue = Arc::new(Mutex::new(Vec::new()));
     let (c_tx, p_rx) = mpsc::channel();
 
-    let thread_handles = (0..3).map(|t| {
+    (0..3).map(|_| {
         let done = done.clone();
         let c_tx = c_tx.clone();
         let task_queue = task_queue.clone();
@@ -146,7 +149,7 @@ fn main() {
     for i in 0..20 {
         let repeats = 150/(i+1) + 45;
 
-        for k in 0..repeats {
+        for _ in 0..repeats {
             let j = rng.gen_range(0, N_MATS);
             let A = &PERM_MATS[8*j..8*(j+1)];
             

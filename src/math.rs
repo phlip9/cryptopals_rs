@@ -1,7 +1,66 @@
 use num::{Integer, Zero, One, BigInt, BigUint, FromPrimitive, ToPrimitive};
 
+pub trait ModInv: Integer {
+    fn modinv(&self, m: &Self) -> Self;
+}
+
+macro_rules! modinv_impl {
+    ($($t:ty),*) => ($(
+        impl ModInv for $t  {
+            fn modinv(&self, m: &Self) -> Self {
+                let mut s = Self::zero();
+                let mut s_p = Self::one();
+                let mut t = Self::one();
+                let mut t_p = Self::zero();
+                let mut r = m.clone();
+                let mut r_p = self.clone();
+
+                while !r.is_zero() {
+                    let q = r_p.div_floor(&r);
+                    let r_t = &r_p - &q * &r;
+                    r_p = r;
+                    r = r_t;
+                    let s_t = &s_p - &q * &s;
+                    s_p = s;
+                    s = s_t;
+                    let t_t = &t_p - &q * &t;
+                    t_p = t;
+                    t = t_t;
+                }
+
+                if r_p != Self::one() {
+                    panic!("no modular inverse");
+                }
+
+                if s_p < Self::zero() {
+                    s_p + m
+                } else {
+                    s_p
+                }
+            }
+        }
+    )*)
+}
+
+modinv_impl! { i8, i16, i32, i64, isize, BigInt }
+
+pub fn modinv<T: ModInv>(a: T, b: T) -> T {
+    a.modinv(&b)
+}
+
+#[test]
+fn test_modinv() {
+    assert_eq!(15, modinv(5_i32, 37_i32));
+    assert_eq!(11, modinv(7_i32, 19_i32));
+
+    let a = BigInt::from_u32(5).unwrap();
+    let m = BigInt::from_u32(37).unwrap();
+    let r = modinv(a, m).to_u32().unwrap();
+    assert_eq!(15, r);
+}
+
 pub trait ModExp: Integer {
-    fn modexp(&self, exp: &Self, md: &Self) -> Self;
+    fn modexp(&self, exp: &Self, m: &Self) -> Self;
 }
 
 macro_rules! modexp_impl {

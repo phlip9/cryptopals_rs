@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate crypto as rust_crypto;
 extern crate cryptopals_rs;
 extern crate iron;
@@ -6,17 +8,17 @@ extern crate rand;
 extern crate rustc_serialize as serialize;
 
 use std::collections::HashMap;
-use std::fs::File;
+//use std::fs::File;
 use std::io;
-use std::io::prelude::*;
-use std::path::PathBuf;
+//use std::io::prelude::*;
+//use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use std::thread;
 
 use iron::prelude::*;
 use iron::{BeforeMiddleware, typemap, status};
-use logger::Logger;
+//use logger::Logger;
 use rand::{Rng, weak_rng};
 use rust_crypto::digest::Digest;
 use serialize::hex::{FromHex, ToHex};
@@ -37,6 +39,7 @@ fn insecure_compare<T: Eq>(a: &[T], b: &[T]) -> bool {
     true
 }
 
+#[allow(unused_variables)]
 fn verify(key: &Key, file: &str, signature: &str) -> io::Result<bool> {
     //let mut path = PathBuf::from("/home/phlip9/dev/cryptopals_rs/data");
     //path.push(file);
