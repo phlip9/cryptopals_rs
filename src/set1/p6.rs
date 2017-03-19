@@ -34,10 +34,9 @@ fn run() {
     let keys = norm_dists.iter()
         .take(5)
         .map(|&(k, _)| {
-            (0..k).map(|i| {
-                let block = (i..bytes.len())
-                    .step_by(k)
-                    .map(|j| bytes[j])
+            (0..k).map(|offset| {
+                let block = (0..(bytes.len() - offset)/k)
+                    .map(|j| bytes[offset+j*k])
                     .collect::<Vec<u8>>();
                 let (sub_key, _) = most_english(&block, |m| freq_englishness(m, &en_freq));
                 sub_key

@@ -37,7 +37,7 @@ pub fn english_freq_vec() -> Vecf {
     fs['z' as usize] = 0.0007836;
     fs[' ' as usize] = 0.1918182;
 
-    for c in 'A' as usize ... 'Z' as usize {
+    for c in 'A' as usize .. ('Z' as usize + 1) {
         fs[c] = fs[c + 32] / 20.0f32;
     }
 
@@ -97,8 +97,9 @@ pub fn relative_englishness(bytes: &[u8], en_freq_sorted: &Vecf) -> f32 {
 pub fn most_english<F>(bytes: &[u8], f: F) -> (u8, f32)
     where F: Fn(&[u8]) -> f32
 {
-    (0...255)
-        .map(|k| {
+    (0..255+1)
+        .map(|k_| {
+            let k = k_ as u8;
             let xor = [k];
             let m = xor_bytes(bytes, &xor);
             (k, f(&m))

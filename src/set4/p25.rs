@@ -4,7 +4,7 @@ use std::fs::File;
 
 use rand::{Rng, weak_rng};
 use serialize::base64::FromBase64;
-use ssl::crypto::symm::{self, decrypt};
+use ssl::symm::{self, decrypt};
 
 use crypto::aes;
 use util::hexdump;
@@ -36,7 +36,7 @@ fn run() {
         })
         .map(|s| s.from_base64().unwrap())
         .map(|c| {
-            decrypt(symm::Type::AES_128_ECB, "YELLOW SUBMARINE".as_bytes(), &[0u8; 16], &c)
+            decrypt(symm::Cipher::aes_128_ecb(), "YELLOW SUBMARINE".as_bytes(), None, &c).unwrap()
         })
         .unwrap();
 

@@ -1,7 +1,7 @@
 use num::{BigUint, Zero, FromPrimitive};
 use rand::{Rng, weak_rng};
 use rust_crypto::digest::Digest;
-use ssl::crypto::symm::{self, encrypt, decrypt};
+use ssl::symm::{self, encrypt, decrypt};
 
 use math::ModExp;
 use sha1::Sha1;
@@ -65,7 +65,7 @@ fn run() {
         let key_A = &out[0..16];
 
         let msg = b"DOS'T THOU JEER AND T-TAUNT ME IN THE TEETH?";
-        encrypt(symm::Type::AES_128_CBC, key_A, &iv, msg)
+        encrypt(symm::Cipher::aes_128_cbc(), key_A, Some(&iv), msg).unwrap()
     };
 
     // Bob
@@ -76,7 +76,7 @@ fn run() {
 
     let msg_B = {
         let key_B = &out[0..16];
-        decrypt(symm::Type::AES_128_CBC, key_B, &iv, &ctxt)
+        decrypt(symm::Cipher::aes_128_cbc(), key_B, Some(&iv), &ctxt).unwrap()
     };
 
     // Mallory
@@ -87,7 +87,7 @@ fn run() {
 
     let msg_M = {
         let key_M = &out[0..16];
-        decrypt(symm::Type::AES_128_CBC, key_M, &iv, &ctxt)
+        decrypt(symm::Cipher::aes_128_cbc(), key_M, Some(&iv), &ctxt).unwrap()
     };
 
     assert_eq!(&msg_B, &msg_M);

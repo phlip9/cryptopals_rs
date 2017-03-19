@@ -1,18 +1,18 @@
 use rand::{Rng, weak_rng};
 use serialize::base64::{FromBase64};
-use ssl::crypto::symm::{self, encrypt, Crypter};
+use ssl::symm::{self, encrypt, Crypter};
 
 use crypto::pkcs7;
 
 fn decryption_oracle(key: &[u8], iv: &[u8], ctxt: &[u8]) -> bool {
-    let c = Crypter::new(symm::Type::AES_128_CBC);
-    c.init(symm::Mode::Decrypt, &key, &iv);
+    let mut out = vec![0; ctxt.len() + 16];
+    let mut c = Crypter::new(symm::Cipher::aes_128_cbc(), symm::Mode::Decrypt, key, Some(iv)).unwrap();
     // handle padding manually
     c.pad(false);
-    let mut r = c.update(&ctxt);
-    let rest = c.finalize();
-    r.extend(rest.into_iter());
-    pkcs7::unpad(r).is_some()
+    let count = c.update(&ctxt, &mut out[..]).unwrap();
+    let rest = c.finalize(&mut out[count..]).unwrap();
+    out.truncate(count + rest);
+    pkcs7::unpad(out).is_some()
 }
 
 fn padding_attack(key: &[u8], iv: &[u8], ctxt: &[u8]) -> Vec<u8> {
@@ -36,7 +36,8 @@ fn padding_attack(key: &[u8], iv: &[u8], ctxt: &[u8]) -> Vec<u8> {
                 cb[k] = cb_view[k] ^ pb[k] ^ pad;
             }
 
-            for c in 0...255 {
+            for c_ in 0..255+1 {
+                let c = c_ as u8;
                 if c == pad {
                     continue;
                 }
@@ -79,7 +80,7 @@ fn run() {
     println!("");
     for i in 0..unknowns.len() {
         let unknown = &unknowns[i];
-        let ctxt = encrypt(symm::Type::AES_128_CBC, &key, &iv, unknown);
+        let ctxt = encrypt(symm::Cipher::aes_128_cbc(), &key, Some(&iv), unknown).unwrap();
         let ptxt = padding_attack(&key, &iv, &ctxt);
         println!("{}", &String::from_utf8_lossy(&ptxt));
         assert_eq!(unknown, &ptxt);

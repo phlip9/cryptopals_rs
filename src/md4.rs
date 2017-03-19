@@ -162,11 +162,12 @@ impl Md4State {
         let mut c = self.state[2];
         let mut d = self.state[3];
 
-        for i in (0..16).step_by(4) {
-            a = op1(a, b, c, d, w[i    ], 3);
-            d = op1(d, a, b, c, w[i + 1], 7);
-            c = op1(c, d, a, b, w[i + 2], 11);
-            b = op1(b, c, d, a, w[i + 3], 19);
+        for i in 0..4 {
+            let j = i * 4;
+            a = op1(a, b, c, d, w[j    ], 3);
+            d = op1(d, a, b, c, w[j + 1], 7);
+            c = op1(c, d, a, b, w[j + 2], 11);
+            b = op1(b, c, d, a, w[j + 3], 19);
         }
 
         for i in 0..4 {

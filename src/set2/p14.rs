@@ -1,6 +1,6 @@
 use rand::{Rng, weak_rng};
 use serialize::base64::FromBase64;
-use ssl::crypto::symm::{self, encrypt};
+use ssl::symm::{self, encrypt};
 
 use num::Integer;
 
@@ -9,8 +9,7 @@ fn encryption_oracle(key: &[u8], prefix: &[u8], input: &[u8], unknown: &[u8]) ->
     m.extend_from_slice(&prefix);
     m.extend_from_slice(&input);
     m.extend_from_slice(&unknown);
-    let iv = [0_u8; 16];
-    encrypt(symm::Type::AES_128_ECB, key, &iv, &m)
+    encrypt(symm::Cipher::aes_128_ecb(), key, None, &m).unwrap()
 }
 
 #[test]
@@ -99,7 +98,8 @@ fn run() {
     for i in 0..unknown_len {
         let mut input: Vec<u8> = vec!['A' as u8; prefix_padding];
 
-        for char_guess in 0...255 {
+        for char_guess_ in 0..255+1 {
+            let char_guess = char_guess_ as u8;
             let k = (i as i32) - (blocksize as i32) + 1;
 
             for j in k..(i as i32) {
@@ -124,7 +124,8 @@ fn run() {
         let cipher_block = &out[b_i*blocksize+prefix_offset..(b_i+1)*blocksize+prefix_offset];
 
         // search for input block with same AES ECB block signature
-        for char_guess in 0...255 {
+        for char_guess_ in 0..255+1 {
+            let char_guess = char_guess_ as u8;
             let j = char_guess as usize;
             let guess_block = &out[j*blocksize+prefix_offset..(j+1)*blocksize+prefix_offset];
             if guess_block == cipher_block {

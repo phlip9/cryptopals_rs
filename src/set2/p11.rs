@@ -2,11 +2,11 @@ use std::collections::HashSet;
 
 use rand::{Rng, weak_rng};
 use serialize::hex::ToHex;
-use ssl::crypto::symm::{self, decrypt};
+use ssl::symm::{self, encrypt};
 
 #[derive(PartialEq, Eq, Debug)]
 enum AESMode {
-    EBC,
+    ECB,
     CBC,
 }
 
@@ -29,11 +29,11 @@ fn encryption_oracle(input: &[u8]) -> (AESMode, Vec<u8>) {
     m.extend_from_slice(input);
     m.extend_from_slice(&pad_right);
 
-    let mode = if rng.gen::<bool>() { AESMode::EBC } else { AESMode::CBC };
+    let mode = if rng.gen::<bool>() { AESMode::ECB } else { AESMode::CBC };
 
     let out = match mode {
-            AESMode::EBC => decrypt(symm::Type::AES_128_ECB, &key, &iv, &m),
-            AESMode::CBC => decrypt(symm::Type::AES_128_CBC, &key, &iv, &m),
+            AESMode::ECB => encrypt(symm::Cipher::aes_128_ecb(), &key, None, &m).unwrap(),
+            AESMode::CBC => encrypt(symm::Cipher::aes_128_cbc(), &key, Some(&iv), &m).unwrap(),
         };
 
     (mode, out)
@@ -44,7 +44,7 @@ fn guess_mode(ciphertext: &[u8]) -> AESMode {
     for chunk in ciphertext.chunks(16) {
         let hex = chunk.to_hex();
         if set.contains(&hex) {
-            return AESMode::EBC;
+            return AESMode::ECB;
         }
         set.insert(hex);
     }
@@ -53,7 +53,7 @@ fn guess_mode(ciphertext: &[u8]) -> AESMode {
 
 #[test]
 fn run() {
-    // choose a plaintext which will force a repeated block only in EBC mode, regardless of
+    // choose a plaintext which will force a repeated block only in ECB mode, regardless of
     // key, iv, and (small) random padding.
     let controlled_plaintext = "[AAAAAAAAAAAAAA][AAAAAAAAAAAAAA][AAAAAAAAAAAAAA]".as_bytes();
     let runs = 1000;

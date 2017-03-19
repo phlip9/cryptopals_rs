@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-#![feature(inclusive_range_syntax)]
 
 extern crate hyper;
 extern crate rand;
@@ -153,7 +152,8 @@ fn main() {
             let j = rng.gen_range(0, N_MATS);
             let A = &PERM_MATS[8*j..8*(j+1)];
             
-            for b in 0...255 {
+            for b_ in 0..255+1 {
+                let b = b_ as u8;
                 let b_p = dot(A, b);
                 mac[i] = b_p;
                 let task = Task {

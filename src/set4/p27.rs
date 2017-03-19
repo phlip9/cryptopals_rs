@@ -1,15 +1,17 @@
 use rand::{Rng, weak_rng};
 use serialize::base64::FromBase64;
-use ssl::crypto::symm::{self, encrypt, decrypt};
+use ssl::symm::{self, encrypt, decrypt};
 
 use util::xor_bytes;
 
 fn encryption_oracle(key: &[u8], input: &[u8]) -> Vec<u8> {
-    encrypt(symm::Type::AES_128_CBC, key, key, input)
+    let iv = Some(key);
+    encrypt(symm::Cipher::aes_128_cbc(), key, iv, input).unwrap()
 }
 
 fn decryption_oracle(key: &[u8], data: &[u8]) -> Vec<u8> {
-    let ptxt = decrypt(symm::Type::AES_128_CBC, key, key, data);
+    let iv = Some(key);
+    let ptxt = decrypt(symm::Cipher::aes_128_cbc(), key, iv, data).unwrap();
 
     let invalid = ptxt.iter()
         .find(|&&b| b < 32 || b >= 127)

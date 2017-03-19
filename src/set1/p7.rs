@@ -1,7 +1,7 @@
 use std::io::prelude::*;
 use std::fs::File;
 
-use ssl::crypto::symm::{self, decrypt};
+use ssl::symm::{self, decrypt};
 
 use serialize::base64::FromBase64;
 
@@ -13,9 +13,8 @@ fn run() {
     let bytes = s.from_base64().unwrap();
 
     let key = "YELLOW SUBMARINE".as_bytes();
-    let iv = vec![0 as u8; key.len()];
 
-    let out = decrypt(symm::Type::AES_128_ECB, &key, &iv, &bytes);
+    let out = decrypt(symm::Cipher::aes_128_ecb(), &key, None, &bytes).unwrap();
     let m = String::from_utf8_lossy(&out);
 
     assert!(m.starts_with("I'm back and I'm ringin' the bell"));

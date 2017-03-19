@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use rand::{Rng, weak_rng};
 use serialize::json::{Json, ToJson};
-use ssl::crypto::symm::{self, encrypt, decrypt};
+use ssl::symm::{self, encrypt, decrypt};
 
 fn parse_querystr(input: &str) -> Result<Json, ()> {
     let mut obj = BTreeMap::new();
@@ -36,13 +36,11 @@ fn profile_for(email: &str) -> String {
 fn encryption_oracle(key: &[u8], input: &str) -> Vec<u8> {
     let plaintext = profile_for(input);
     let data = plaintext.as_bytes();
-    let iv = [0_u8; 16];
-    encrypt(symm::Type::AES_128_ECB, key, &iv, data)
+    encrypt(symm::Cipher::aes_128_ecb(), key, None, data).unwrap()
 }
 
 fn decryption_oracle(key: &[u8], data: &[u8]) -> Json {
-    let iv = [0_u8; 16];
-    let plaintext = decrypt(symm::Type::AES_128_ECB, key, &iv, data);
+    let plaintext = decrypt(symm::Cipher::aes_128_ecb(), key, None, data).unwrap();
     let string = String::from_utf8_lossy(&plaintext);
     parse_querystr(&string).unwrap()
 }

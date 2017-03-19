@@ -4,11 +4,11 @@ version = "0.1.0"
 authors = ["Philip Hayes <philiphayes9@gmail.com>"]
 
 [dependencies]
-openssl = "0.7"
+openssl = "0.9"
 rand = "0.3"
 rustc-serialize = "0.3"
 rust-crypto = "0.2"
-iron = "0.4"
-logger = "0.1"
-hyper = "0.9"
+iron = "0.5"
+logger = "0.3"
+hyper = "0.10"
 num = "0.1"

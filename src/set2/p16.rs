@@ -1,5 +1,5 @@
 use rand::{Rng, weak_rng};
-use ssl::crypto::symm::{self, encrypt, decrypt};
+use ssl::symm::{self, encrypt, decrypt};
 
 fn encryption_oracle(key: &[u8], iv: &[u8], input: &[u8]) -> Vec<u8> {
     let prefix = "comment1=cooking%20MCs;userdata=".as_bytes();
@@ -14,11 +14,11 @@ fn encryption_oracle(key: &[u8], iv: &[u8], input: &[u8]) -> Vec<u8> {
     data.extend_from_slice(&input_filtered);
     data.extend_from_slice(postfix);
 
-    encrypt(symm::Type::AES_128_CBC, key, iv, &data)
+    encrypt(symm::Cipher::aes_128_cbc(), key, Some(iv), &data).unwrap()
 }
 
 fn decryption_oracle(key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
-    decrypt(symm::Type::AES_128_CBC, key, iv, data)
+    decrypt(symm::Cipher::aes_128_cbc(), key, Some(iv), data).unwrap()
 }
 
 #[test]

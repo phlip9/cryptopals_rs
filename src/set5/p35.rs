@@ -1,7 +1,7 @@
 use num::{BigUint, Zero, One, FromPrimitive};
 use rand::{Rng, weak_rng};
 use rust_crypto::digest::Digest;
-use ssl::crypto::symm::{self, encrypt, decrypt};
+use ssl::symm::{self, encrypt, decrypt};
 
 use math::ModExp;
 use sha1::Sha1;
@@ -60,7 +60,7 @@ fn run_g_1() {
         let key_A = &out[0..16];
 
         let msg = b"DOS'T THOU JEER AND T-TAUNT ME IN THE TEETH?";
-        encrypt(symm::Type::AES_128_CBC, key_A, &iv, msg)
+        encrypt(symm::Cipher::aes_128_cbc(), key_A, Some(&iv), msg).unwrap()
     };
 
     // Bob
@@ -71,7 +71,7 @@ fn run_g_1() {
 
     let msg_B = {
         let key_B = &out[0..16];
-        decrypt(symm::Type::AES_128_CBC, key_B, &iv, &ctxt)
+        decrypt(symm::Cipher::aes_128_cbc(), key_B, Some(&iv), &ctxt).unwrap()
     };
 
     // Mallory
@@ -82,7 +82,7 @@ fn run_g_1() {
 
     let msg_M = {
         let key_M = &out[0..16];
-        decrypt(symm::Type::AES_128_CBC, key_M, &iv, &ctxt)
+        decrypt(symm::Cipher::aes_128_cbc(), key_M, Some(&iv), &ctxt).unwrap()
     };
 
     assert_eq!(&msg_B, &msg_M);
@@ -142,7 +142,7 @@ fn run_g_p() {
         let key_A = &out[0..16];
 
         let msg = b"DOS'T THOU JEER AND T-TAUNT ME IN THE TEETH?";
-        encrypt(symm::Type::AES_128_CBC, key_A, &iv, msg)
+        encrypt(symm::Cipher::aes_128_cbc(), key_A, Some(&iv), msg).unwrap()
     };
 
     // Bob
@@ -153,7 +153,7 @@ fn run_g_p() {
 
     let msg_B = {
         let key_B = &out[0..16];
-        decrypt(symm::Type::AES_128_CBC, key_B, &iv, &ctxt)
+        decrypt(symm::Cipher::aes_128_cbc(), key_B, Some(&iv), &ctxt).unwrap()
     };
 
     // Mallory
@@ -164,7 +164,7 @@ fn run_g_p() {
 
     let msg_M = {
         let key_M = &out[0..16];
-        decrypt(symm::Type::AES_128_CBC, key_M, &iv, &ctxt)
+        decrypt(symm::Cipher::aes_128_cbc(), key_M, Some(&iv), &ctxt).unwrap()
     };
 
     assert_eq!(&msg_B, &msg_M);
@@ -184,7 +184,7 @@ fn run_g_pm1() {
       fffffffffffff";
     let p = BigUint::from_bytes_le(p_bytes);
 
-    // g = p => s = 0
+    // g = p - 1
     let g = &p - &BigUint::one();
 
     // Alice
@@ -235,7 +235,7 @@ fn run_g_pm1() {
         let key_A = &out[0..16];
 
         let msg = b"DOS'T THOU JEER AND T-TAUNT ME IN THE TEETH?";
-        encrypt(symm::Type::AES_128_CBC, key_A, &iv, msg)
+        encrypt(symm::Cipher::aes_128_cbc(), key_A, Some(&iv), msg).unwrap()
     };
 
     // Bob
@@ -246,29 +246,37 @@ fn run_g_pm1() {
 
     let msg_B = {
         let key_B = &out[0..16];
-        decrypt(symm::Type::AES_128_CBC, key_B, &iv, &ctxt)
+        decrypt(symm::Cipher::aes_128_cbc(), key_B, Some(&iv), &ctxt).unwrap()
     };
 
     // Mallory
 
+    // case 1: s = 1
     m.reset();
     m.input(&BigUint::one().to_bytes_le());
     m.result(&mut out);
 
-    let msg_M_1 = {
+    let msg_M_1_valid = {
         let key_M = &out[0..16];
-        decrypt(symm::Type::AES_128_CBC, key_M, &iv, &ctxt)
+        match decrypt(symm::Cipher::aes_128_cbc(), key_M, Some(&iv), &ctxt) {
+            Ok(msg_M) => &msg_B == &msg_M,
+            Err(_) => false
+        }
     };
 
-    // g = p - 1
+    // case 2: s = p - 1
+    // reuse g, since g = p - 1
     m.reset();
     m.input(&g.to_bytes_le());
     m.result(&mut out);
 
-    let msg_M_2 = {
+    let msg_M_2_valid = {
         let key_M = &out[0..16];
-        decrypt(symm::Type::AES_128_CBC, key_M, &iv, &ctxt)
+        match decrypt(symm::Cipher::aes_128_cbc(), key_M, Some(&iv), &ctxt) {
+            Ok(msg_M) => &msg_B == &msg_M,
+            Err(_) => false
+        }
     };
 
-    assert!(&msg_B == &msg_M_1 || &msg_B == &msg_M_2);
+    assert!(msg_M_1_valid || msg_M_2_valid);
 }
