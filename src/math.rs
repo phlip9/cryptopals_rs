@@ -80,7 +80,13 @@ macro_rules! modexp_impl {
                     e = &e >> 1;
                     b = (&b * &b) % m;
                 }
-                r
+                println!("r: {}", r);
+                if &r < &Self::zero() {
+                    let a = r + m;
+                    a
+                } else {
+                    r
+                }
             }
         }
     )*)
@@ -91,10 +97,21 @@ modexp_impl! { u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, BigInt, BigUi
 #[test]
 fn test_modexp() {
     assert_eq!(6_u32, 5_u32.modexp(&9, &37));
-    
+
     let b = BigUint::from_u32(5).unwrap();
     let e = BigUint::from_u32(9).unwrap();
     let m = BigUint::from_u32(37).unwrap();
     let r = b.modexp(&e, &m).to_u32().unwrap();
     assert_eq!(6, r);
+}
+
+#[test]
+fn test_modexp_negative_base() {
+    assert_eq!(31_i32, (-5_i32).modexp(&9, &37));
+
+    let b = -(BigInt::from_u32(5).unwrap());
+    let e = BigInt::from_u32(9).unwrap();
+    let m = BigInt::from_u32(37).unwrap();
+    let r = b.modexp(&e, &m).to_i32().unwrap();
+    assert_eq!(31, r);
 }
