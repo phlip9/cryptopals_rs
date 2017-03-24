@@ -1,4 +1,6 @@
-use num::{BigInt, Zero, One, FromPrimitive};
+use std::collections::HashMap;
+
+use num::{BigInt, FromPrimitive};
 use num::bigint::Sign;
 use rand::{Rng, weak_rng, XorShiftRng};
 use rust_crypto::digest::Digest;
@@ -6,7 +8,6 @@ use rust_crypto::sha2::Sha256;
 use rust_crypto::hmac::Hmac;
 use rust_crypto::mac::{Mac, MacResult};
 use ssl::symm::{self, encrypt, decrypt};
-use std::collections::HashMap;
 
 use math::ModExp;
 
@@ -85,7 +86,6 @@ impl SRPServer {
 
         let mut K = [0_u8; 32];
         let mut m = Sha256::new();
-        m.reset();
         m.input(&S.to_bytes_le().1);
         m.result(&mut K);
 

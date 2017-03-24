@@ -80,7 +80,6 @@ macro_rules! modexp_impl {
                     e = &e >> 1;
                     b = (&b * &b) % m;
                 }
-                println!("r: {}", r);
                 if &r < &Self::zero() {
                     let a = r + m;
                     a
